@@ -55,7 +55,7 @@ java {
 
 application {
     // Define the main class for the application.
-    mainClass = 'instinct2026.MainGUI'
+    mainClass = 'instinct2026.GUI.MainGUI'
 }
 
 tasks.named('test') {
@@ -64,5 +64,5 @@ tasks.named('test') {
 }
 
 tasks.named('run', JavaExec) {
-    mainClass.set('instinct2026.MainGUI')
+    mainClass.set('instinct2026.GUI.MainGUI')
 }

@@ -1,4 +1,4 @@
-package instinct2026;
+package instinct2026.API;
 
 import java.io.FileInputStream;
 import java.util.Arrays;
@@ -29,7 +29,7 @@ public class GoogleSheetWriter {
     }
 
     /**
-     * Appends a row: Team | Unitless EPA | Approx EPA
+     * Updates a row: Team | Unitless EPA | Approx EPA
      */
     public void appendRow(int teamNumber, double unitlessEPA, double approxEPA) throws Exception {
 

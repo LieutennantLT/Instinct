@@ -1,4 +1,4 @@
-package instinct2026;
+package instinct2026.API;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -24,13 +24,17 @@ public class StatboticsAPI {
         String urlString = String.format(TEAM_URL, teamNumber);
         String response = fetch(urlString);
 
+        if (response == null) {
+            throw new RuntimeException("Failed to fetch data from Statbotics.");
+        }
+
         JsonObject json = JsonParser.parseString(response).getAsJsonObject();
         JsonObject team = json.getAsJsonObject("team");
 
         // Try team_years first (most accurate)
         if (json.has("team_years")) {
             JsonArray years = json.getAsJsonArray("team_years");
-            int currentYear = java.time.Year.now().getValue();
+            int currentYear = 2026;
 
             for (int i = 0; i < years.size(); i++) {
                 JsonObject y = years.get(i).getAsJsonObject();
@@ -71,7 +75,7 @@ public class StatboticsAPI {
         con.setRequestMethod("GET");
 
         if (con.getResponseCode() != 200) {
-            throw new RuntimeException("HTTP error: " + con.getResponseCode());
+            System.out.println("Statbotics API returned: " + con.getResponseCode());
         }
 
         BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream()));
