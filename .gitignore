@@ -6,3 +6,6 @@ build
 
 # Ignore Google Cloud service account key
 credentials.json
+
+# Ignore TBA API Key
+config.properties

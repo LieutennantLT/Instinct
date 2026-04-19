@@ -4,6 +4,8 @@ import instinct2026.Constants.EPAConsts;
 import instinct2026.Services.*;
 
 import javafx.application.Application;
+import javafx.application.Platform;
+import javafx.concurrent.Task;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
@@ -11,7 +13,6 @@ import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.*;
 import javafx.stage.Stage;
-import javafx.concurrent.Task;
 
 public class MainGUI extends Application {
 
@@ -70,7 +71,7 @@ public class MainGUI extends Application {
                 });
 
                 task.setOnFailed(ev -> {
-                    resultLabel.setText("API error (Statbotics may be down)");
+                    resultLabel.setText("API error");
                     task.getException().printStackTrace();
                 });
 
@@ -79,7 +80,7 @@ public class MainGUI extends Application {
             } catch (NumberFormatException ex) {
                 resultLabel.setText("Invalid input.");
             }
-            });
+        });
 
         VBox tab1Layout = new VBox(10, teamInput, fetchButton, resultLabel);
         tab1Layout.setPadding(new Insets(10));
@@ -99,15 +100,13 @@ public class MainGUI extends Application {
 
         Pane overlay = new Pane();
 
-        // Trial number
-        TextField trials = new TextField(); Label trialsLabel = new Label("# of sims:");
+        TextField trials = new TextField();
+        Label trialsLabel = new Label("# of sims:");
 
-        // Red alliance
         TextField r1 = new TextField(); Label r1EPA = new Label("-");
         TextField r2 = new TextField(); Label r2EPA = new Label("-");
         TextField r3 = new TextField(); Label r3EPA = new Label("-");
 
-        // Blue alliance
         TextField b1 = new TextField(); Label b1EPA = new Label("-");
         TextField b2 = new TextField(); Label b2EPA = new Label("-");
         TextField b3 = new TextField(); Label b3EPA = new Label("-");
@@ -122,29 +121,18 @@ public class MainGUI extends Application {
 
         trials.setPromptText("simulations");
 
-        // Styling
         String redStyle = "-fx-background-color: rgba(255, 0, 0, 0.3);";
         String blueStyle = "-fx-background-color: rgba(0, 0, 255, 0.3);";
 
         r1.setStyle(redStyle); r2.setStyle(redStyle); r3.setStyle(redStyle);
         b1.setStyle(blueStyle); b2.setStyle(blueStyle); b3.setStyle(blueStyle);
 
-        // Labels
         Label redTotal = new Label("Red EPA: 0");
         Label blueTotal = new Label("Blue EPA: 0");
         Label winChance = new Label("Win %: -");
 
-        winChance.setStyle("-fx-font-size: 18px; -fx-font-weight: bold;");
-        trials.setStyle("-fx-font-size: 14px;");
-        trialsLabel.setStyle("-fx-font-size: 14px;");
-
         Button simulateBtn = new Button("Simulate");
 
-        // =========================
-        // POSITION ELEMENTS
-        // =========================
-
-        // RED
         setRelativePosition(r1, overlay, 0.10, 0.20);
         setRelativePosition(r2, overlay, 0.10, 0.40);
         setRelativePosition(r3, overlay, 0.10, 0.60);
@@ -153,7 +141,6 @@ public class MainGUI extends Application {
         setRelativePosition(r2EPA, overlay, 0.20, 0.40);
         setRelativePosition(r3EPA, overlay, 0.20, 0.60);
 
-        // BLUE
         setRelativePosition(b1, overlay, 0.65, 0.20);
         setRelativePosition(b2, overlay, 0.65, 0.40);
         setRelativePosition(b3, overlay, 0.65, 0.60);
@@ -162,31 +149,20 @@ public class MainGUI extends Application {
         setRelativePosition(b2EPA, overlay, 0.75, 0.40);
         setRelativePosition(b3EPA, overlay, 0.75, 0.60);
 
-        // Bottom
         setRelativePosition(redTotal, overlay, 0.15, 0.80);
         setRelativePosition(blueTotal, overlay, 0.70, 0.80);
         setRelativePosition(winChance, overlay, 0.35, 0.80);
         setRelativePosition(trials, overlay, 0.30, 0.05);
         setRelativePosition(trialsLabel, overlay, 0.19, 0.05);
-
         setRelativePosition(simulateBtn, overlay, 0.65, 0.05);
 
-        //ProgressIndicator spinner = new ProgressIndicator();
-        //spinner.setVisible(false);
-
-        // =========================
-        // SIMULATION LOGIC
-        // =========================
         simulateBtn.setOnAction(e -> {
-
             winChance.setText("Simulating...");
-            //spinner.setVisible(true);
 
             Task<Void> task = new Task<>() {
                 @Override
                 protected Void call() throws Exception {
-                            
-                    int trialsnums = Integer.parseInt(trials.getText());
+                    int trialCount = Integer.parseInt(trials.getText());
 
                     double R1 = updateEPA(r1, r1EPA);
                     double R2 = updateEPA(r2, r2EPA);
@@ -196,26 +172,23 @@ public class MainGUI extends Application {
                     double B2 = updateEPA(b2, b2EPA);
                     double B3 = updateEPA(b3, b3EPA);
 
-                    MatchSimulator.Result result = simulator.simulate(R1, R2, R3, B1, B2, B3, trialsnums);
+                    MatchSimulator.Result result =
+                            simulator.simulate(R1, R2, R3, B1, B2, B3, trialCount);
 
-                    javafx.application.Platform.runLater(() -> {
-                        //spinner.setVisible(false);
+                    Platform.runLater(() -> {
                         redTotal.setText("Red EPA: " + round(result.redEPA));
                         blueTotal.setText("Blue EPA: " + round(result.blueEPA));
-                        winChance.setText(String.format("Red Win Chance: %.1f%%", result.redWinProb));
-                });
+                        winChance.setText(
+                                String.format("Red Win Chance: %.1f%%", result.redWinProb)
+                        );
+                    });
 
-            return null;
-        }
-    };
+                    return null;
+                }
+            };
 
-        task.setOnFailed(ev -> {
-            winChance.setText("Simulation error");
-            task.getException().printStackTrace();
+            new Thread(task).start();
         });
-
-        new Thread(task).start();
-    });
 
         overlay.getChildren().addAll(
                 r1, r2, r3, r1EPA, r2EPA, r3EPA,
@@ -225,84 +198,139 @@ public class MainGUI extends Application {
         );
 
         StackPane simulatorPane = new StackPane(bg, overlay);
-
         Tab tab2 = new Tab("Match Simulator", simulatorPane);
 
         // =========================
         // TAB 3: CACHE CONSOLE
         // =========================
-
         TextArea cacheView = new TextArea();
         cacheView.setEditable(false);
-        cacheView.setPrefHeight(300);
 
-        Button refreshBtn = new Button("Refresh Cache");
-        Button clearBtn = new Button("Clear Cache (Backup)");
-        Button restoreBtn = new Button("Restore Backup");
+        Button refreshBtn = new Button("Refresh");
+        Button clearBtn = new Button("Clear");
+        Button restoreBtn = new Button("Restore");
 
-        Label statusLabel = new Label("");
-
-        // Format cache nicely
-        Runnable refreshCacheDisplay = () -> {
+        refreshBtn.setOnAction(e -> {
             StringBuilder sb = new StringBuilder();
-
-            sb.append("=== CURRENT CACHE ===\n");
             epaService.getCacheSnapshot().forEach((team, epa) ->
                     sb.append("Team ").append(team)
-                    .append(" -> ").append(String.format("%.2f", epa))
-                    .append("\n")
+                      .append(" -> ").append(epa).append("\n")
             );
-
-            sb.append("\n=== BACKUP CACHE ===\n");
-            epaService.getBackupSnapshot().forEach((team, epa) ->
-                    sb.append("Team ").append(team)
-                    .append(" -> ").append(String.format("%.2f", epa))
-                    .append("\n")
-            );
-
             cacheView.setText(sb.toString());
-        };
-
-        // Button actions
-        refreshBtn.setOnAction(e -> {
-            refreshCacheDisplay.run();
-            statusLabel.setText("Cache refreshed");
         });
 
-        clearBtn.setOnAction(e -> {
-            epaService.clearCache();
-            refreshCacheDisplay.run();
-            statusLabel.setText("Cache cleared (moved to backup)");
-        });
+        clearBtn.setOnAction(e -> epaService.clearCache());
+        restoreBtn.setOnAction(e -> epaService.retrieveBackupCache());
 
-        restoreBtn.setOnAction(e -> {
-            epaService.retrieveBackupCache();
-            refreshCacheDisplay.run();
-            statusLabel.setText("Backup restored to cache");
-        });
-
-        // Layout
-        HBox buttons = new HBox(10, refreshBtn, clearBtn, restoreBtn);
-
-        VBox tab3Layout = new VBox(10, buttons, cacheView, statusLabel);
+        VBox tab3Layout = new VBox(10, new HBox(10, refreshBtn, clearBtn, restoreBtn), cacheView);
         tab3Layout.setPadding(new Insets(10));
 
         Tab tab3 = new Tab("Cache Console", tab3Layout);
 
         // =========================
-        TabPane tabPane = new TabPane(tab1, tab2, tab3);
+        // TAB 4: TEAM CONSISTENCY
+        // =========================
+        TextField consistencyInput = new TextField();
+        consistencyInput.setPromptText("Enter team number");
+
+        Button consistencyBtn = new Button("Calculate Consistency");
+
+        Label consistencyLabel = new Label("Enter a team number.");
+        ProgressIndicator spinner = new ProgressIndicator();
+        spinner.setVisible(false);
+        spinner.setMaxSize(40, 40);
+
+        consistencyBtn.setOnAction(e -> {
+            try {
+                int team = Integer.parseInt(consistencyInput.getText());
+
+                consistencyLabel.setText("Calculating...");
+                spinner.setVisible(true);
+
+                Task<Double> task = new Task<>() {
+                    @Override
+                    protected Double call() throws Exception {
+                        return TBAService.getConsistency(team);
+                    }
+                };
+
+                task.setOnSucceeded(ev -> {
+                    double score = task.getValue();
+                    spinner.setVisible(false);
+
+                    String rating;
+                    String color;
+
+                    if (score >= 90) {
+                        rating = "Crazy Consistent";
+                        color = "darkgreen";
+                    } else if (score >= 85) {
+                        rating = "Extremely Consistent";
+                        color = "green";
+                    } else if (score >= 80) {
+                        rating = "Very Consistent";
+                        color = "limegreen";
+                    } else if (score >= 75) {
+                        rating = "Quite Consistent";
+                        color = "gold";
+                    } else if (score >= 70) {
+                        rating = "Moderately Consistent";
+                        color = "orange";
+                    } else if (score >= 65) {
+                        rating = "Poorly Consistent";
+                        color = "darkorange";
+                    } else if (score >= 60) {
+                        rating = "Terribly Consistent";
+                        color = "red";
+                    } else {
+                        rating = "Unpredictable";
+                        color = "darkred";
+                    }
+
+                    consistencyLabel.setText(String.format("%.1f%% - %s", score, rating));
+                    consistencyLabel.setStyle("-fx-text-fill: " + color + "; -fx-font-weight: bold;");
+
+                    consistencyLabel.setText(
+                            "Team " + team +
+                            "\nConsistency: " + String.format("%.1f%%", score) +
+                            "\nRating: " + rating
+                    );
+                });
+
+                task.setOnFailed(ev -> {
+                spinner.setVisible(false);
+
+                Throwable ex = task.getException();
+                ex.printStackTrace();
+
+                consistencyLabel.setText("Error:\n" + ex.getMessage());
+                });
+
+                new Thread(task).start();
+
+            } catch (NumberFormatException ex) {
+                consistencyLabel.setText("Invalid team number.");
+            }
+        });
+
+        VBox tab4Layout = new VBox(12,
+                consistencyInput,
+                consistencyBtn,
+                spinner,
+                consistencyLabel
+        );
+        tab4Layout.setPadding(new Insets(15));
+
+        Tab tab4 = new Tab("Team Consistency", tab4Layout);
+
+        // =========================
+        TabPane tabPane = new TabPane(tab1, tab2, tab3, tab4);
 
         Scene scene = new Scene(tabPane, 600, 500);
         stage.setTitle("FRC Strategy Tool");
         stage.setScene(scene);
         stage.show();
     }
-
-    
-
-    // =========================
-    // HELPERS
-    // =========================
 
     private void setRelativePosition(Control node, Pane parent, double x, double y) {
         node.layoutXProperty().bind(parent.widthProperty().multiply(x));
@@ -321,7 +349,7 @@ public class MainGUI extends Application {
         }
 
         int team = Integer.parseInt(field.getText());
-        double epa = epaService.getEPA(team);
+        double epa = EPAService.getEPA(team);
 
         label.setText(String.format("%.1f", epa));
         return epa;

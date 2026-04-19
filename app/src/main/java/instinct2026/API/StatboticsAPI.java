@@ -17,9 +17,7 @@ public class StatboticsAPI {
 
     private static final String TEAM_URL = "https://api.statbotics.io/v3/site/team/%d";
 
-    /**
-     * Returns unitless EPA for a team
-     */
+    /** Returns unitless EPA for a team*/
     public static double getUnitlessEPA(int teamNumber) throws Exception {
         String urlString = String.format(TEAM_URL, teamNumber);
         String response = fetch(urlString);
@@ -31,7 +29,7 @@ public class StatboticsAPI {
         JsonObject json = JsonParser.parseString(response).getAsJsonObject();
         JsonObject team = json.getAsJsonObject("team");
 
-        // Try team_years first (most accurate)
+        // Try team_years first
         if (json.has("team_years")) {
             JsonArray years = json.getAsJsonArray("team_years");
             int currentYear = 2026;
@@ -58,17 +56,13 @@ public class StatboticsAPI {
         throw new RuntimeException("No EPA data found for team " + teamNumber);
     }
 
-    /**
-     * Returns regular EPA based on interpolated values from unitless EPA
-     */
+    /**Returns regular EPA based on interpolated values from unitless EPA*/
     public static double getEPA(double unitlessEPA){
 
       return Math.round((EPAConsts.EPA_Conversion_Tree.epaConversionTable.get(unitlessEPA) * 10.0))/10.0;
     }
 
-    /**
-     * Helper method for HTTP GET
-     */
+    /**Helper method for HTTP GET*/
     private static String fetch(String urlString) throws Exception {
         URL url = new URL(urlString);
         HttpURLConnection con = (HttpURLConnection) url.openConnection();
