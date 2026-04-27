@@ -1,5 +1,10 @@
 package instinct2026.GUI;
 
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
+import java.util.TreeSet;
+
 import instinct2026.Constants.EPAConsts;
 import instinct2026.Services.*;
 
@@ -13,6 +18,18 @@ import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.*;
 import javafx.stage.Stage;
+import javafx.scene.chart.BarChart;
+import javafx.scene.chart.CategoryAxis;
+import javafx.scene.chart.LineChart;
+import javafx.scene.chart.NumberAxis;
+import javafx.scene.chart.XYChart;
+import javafx.scene.chart.BarChart;
+import javafx.scene.chart.CategoryAxis;
+
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
+import java.util.TreeSet;
 
 public class MainGUI extends Application {
 
@@ -95,11 +112,26 @@ public class MainGUI extends Application {
         ImageView bg = new ImageView(fieldImage);
 
         bg.setPreserveRatio(false);
-        bg.fitWidthProperty().bind(stage.widthProperty());
-        bg.fitHeightProperty().bind(stage.heightProperty());
+        bg.setFitHeight(300);
+        bg.setFitWidth(600);
 
         Pane overlay = new Pane();
+        overlay.setPrefHeight(0);
+        
+        //Graph setup
+        CategoryAxis xAxis = new CategoryAxis();
+        xAxis.setLabel("Score Range");
 
+        NumberAxis yAxis = new NumberAxis();
+        yAxis.setLabel("Frequency");
+
+        BarChart<String, Number> scoreChart = new BarChart<>(xAxis, yAxis);
+        scoreChart.setTitle("Projected Score Distribution");
+        scoreChart.setAnimated(false);
+        scoreChart.setCategoryGap(0);
+        scoreChart.setBarGap(0);
+        scoreChart.setPrefHeight(320);
+        //Input setup
         TextField trials = new TextField();
         Label trialsLabel = new Label("# of sims:");
 
@@ -121,18 +153,21 @@ public class MainGUI extends Application {
 
         trials.setPromptText("simulations");
 
+        //Styling setup
         String redStyle = "-fx-background-color: rgba(255, 0, 0, 0.3);";
         String blueStyle = "-fx-background-color: rgba(0, 0, 255, 0.3);";
 
         r1.setStyle(redStyle); r2.setStyle(redStyle); r3.setStyle(redStyle);
         b1.setStyle(blueStyle); b2.setStyle(blueStyle); b3.setStyle(blueStyle);
 
+        //Label setup
         Label redTotal = new Label("Red EPA: 0");
         Label blueTotal = new Label("Blue EPA: 0");
         Label winChance = new Label("Win %: -");
 
         Button simulateBtn = new Button("Simulate");
 
+        //Position setup
         setRelativePosition(r1, overlay, 0.10, 0.20);
         setRelativePosition(r2, overlay, 0.10, 0.40);
         setRelativePosition(r3, overlay, 0.10, 0.60);
@@ -159,9 +194,9 @@ public class MainGUI extends Application {
         simulateBtn.setOnAction(e -> {
             winChance.setText("Simulating...");
 
-            Task<Void> task = new Task<>() {
+            Task<MatchSimulator.Result> task = new Task<>() {
                 @Override
-                protected Void call() throws Exception {
+                protected MatchSimulator.Result call() throws Exception {
                     int trialCount = Integer.parseInt(trials.getText());
 
                     double R1 = updateEPA(r1, r1EPA);
@@ -172,20 +207,104 @@ public class MainGUI extends Application {
                     double B2 = updateEPA(b2, b2EPA);
                     double B3 = updateEPA(b3, b3EPA);
 
-                    MatchSimulator.Result result =
-                            simulator.simulate(R1, R2, R3, B1, B2, B3, trialCount);
-
-                    Platform.runLater(() -> {
-                        redTotal.setText("Red EPA: " + round(result.redEPA));
-                        blueTotal.setText("Blue EPA: " + round(result.blueEPA));
-                        winChance.setText(
-                                String.format("Red Win Chance: %.1f%%", result.redWinProb)
-                        );
-                    });
-
-                    return null;
+                    return simulator.simulate(R1, R2, R3, B1, B2, B3, trialCount);
                 }
             };
+
+            task.setOnSucceeded(ev -> {
+                MatchSimulator.Result result = task.getValue();
+
+                redTotal.setText("Red EPA: " + round(result.redEPA));
+                blueTotal.setText("Blue EPA: " + round(result.blueEPA));
+                winChance.setText(String.format("Red Win Chance: %.1f%%", result.redWinProb));
+
+                XYChart.Series<String, Number> redSeries = new XYChart.Series<>();
+                redSeries.setName("Red Alliance");
+
+                XYChart.Series<String, Number> blueSeries = new XYChart.Series<>();
+                blueSeries.setName("Blue Alliance");
+
+                int binSize = 10;
+
+                Map<Integer, Integer> redBins = new TreeMap<>();
+                Map<Integer, Integer> blueBins = new TreeMap<>();
+
+                for (double score : result.redScores) {
+                    int bin = ((int) score / binSize) * binSize;
+                    redBins.put(bin, redBins.getOrDefault(bin, 0) + 1);
+                }
+
+                for (double score : result.blueScores) {
+                    int bin = ((int) score / binSize) * binSize;
+                    blueBins.put(bin, blueBins.getOrDefault(bin, 0) + 1);
+                }
+
+                Set<Integer> allBins = new TreeSet<>();
+                allBins.addAll(redBins.keySet());
+                allBins.addAll(blueBins.keySet());
+
+                for (int bin : allBins) {
+                    String label = bin + "-" + (bin + binSize);
+
+                    redSeries.getData().add(new XYChart.Data<>(
+                            label,
+                            redBins.getOrDefault(bin, 0)
+                    ));
+
+                    blueSeries.getData().add(new XYChart.Data<>(
+                            label,
+                            blueBins.getOrDefault(bin, 0)
+                    ));
+                }
+
+                scoreChart.getData().clear();
+                scoreChart.getData().addAll(redSeries, blueSeries);
+                
+                Platform.runLater(() -> {
+                    scoreChart.applyCss();
+                    scoreChart.layout();
+
+                    //Style every red bar
+                    for (XYChart.Data<String, Number> data : redSeries.getData()) {
+                        if (data.getNode() != null) {
+                            data.getNode().setStyle("-fx-bar-fill: red;");
+                        }
+                    }
+
+                    //Style every blue bar
+                    for (XYChart.Data<String, Number> data : blueSeries.getData()) {
+                        if (data.getNode() != null) {
+                            data.getNode().setStyle("-fx-bar-fill: blue;");
+                        }
+                    }
+
+                    //Color legend text
+                    scoreChart.lookupAll(".chart-legend-item").forEach(node -> {
+                    if (node instanceof Label label) {
+                        Region symbol = (Region) label.lookup(".chart-legend-item-symbol");
+
+                        if (label.getText().equals("Red Alliance")) {
+                            label.setStyle("-fx-text-fill: red;");
+                            if (symbol != null) {
+                                symbol.setStyle("-fx-background-color: red;");
+                            }
+
+                        } else if (label.getText().equals("Blue Alliance")) {
+                            label.setStyle("-fx-text-fill: blue;");
+                            if (symbol != null) {
+                                symbol.setStyle("-fx-background-color: blue;");
+                            }
+                        }
+                    }
+                });
+            });
+
+            });
+
+            task.setOnFailed(ev -> {
+                winChance.setText("Simulation error");
+                task.getException().printStackTrace();
+            });
 
             new Thread(task).start();
         });
@@ -198,7 +317,11 @@ public class MainGUI extends Application {
         );
 
         StackPane simulatorPane = new StackPane(bg, overlay);
-        Tab tab2 = new Tab("Match Simulator", simulatorPane);
+
+        VBox simulatorLayout = new VBox(10, simulatorPane, scoreChart);
+        simulatorLayout.setPadding(new Insets(10));
+
+        Tab tab2 = new Tab("Match Simulator", simulatorLayout);
 
         // =========================
         // TAB 3: CACHE CONSOLE

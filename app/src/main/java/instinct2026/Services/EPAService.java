@@ -21,6 +21,11 @@ public class EPAService {
         return epa;
     }
 
+    public static void putCache(int team, double epa) {
+        cache.put(team, epa);
+
+    }
+
     public static void clearCache() {
         backupCache.clear();
         backupCache.putAll(cache);

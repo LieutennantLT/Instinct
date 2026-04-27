@@ -28,9 +28,8 @@ public class GoogleSheetWriter {
                 .build();
     }
 
-    /**
-     * Updates a row: Team | Unitless EPA | Approx EPA
-     */
+    // Updates a row: Team | Unitless EPA | Approx EPA
+     
     public void appendRow(int teamNumber, double unitlessEPA, double approxEPA) throws Exception {
 
         ValueRange body = new ValueRange().setValues(
@@ -43,9 +42,8 @@ public class GoogleSheetWriter {
                 )
         );
 
-        service.spreadsheets().values()
-                .update(sheetId, "Sheet1!A2:C2", body)
-                .setValueInputOption("RAW")
+        service.spreadsheets().values().update(sheetId, "Sheet1!A2:C2", body)
+.setValueInputOption("RAW")
                 .execute();
     }
 }

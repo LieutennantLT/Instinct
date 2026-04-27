@@ -50,4 +50,5 @@ public class TBAService {
 
         return Math.max(0, consistency * 100);
     }
+
 }
