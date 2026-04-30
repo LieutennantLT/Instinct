@@ -51,4 +51,24 @@ public class TBAService {
         return Math.max(0, consistency * 100);
     }
 
+    public static CAEResult getConsistencyAndEPA(int team) throws Exception{
+        double consistency = getConsistency(team);
+        double EPA = EPAService.getEPA(team);
+
+        return new CAEResult(consistency, EPA);
+        
+    }
+
+    public static class CAEResult{
+
+        public double consistency;
+        public double EPA;
+
+        public CAEResult(double consistency, double EPA){
+            this.consistency = consistency;
+            this.EPA = EPA;
+        }
+
+    }
+
 }

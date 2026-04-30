@@ -7,7 +7,7 @@ import java.util.TreeSet;
 
 import instinct2026.Constants.EPAConsts;
 import instinct2026.Services.*;
-
+import instinct2026.Services.TBAService.CAEResult;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.concurrent.Task;
@@ -34,6 +34,7 @@ import java.util.TreeSet;
 public class MainGUI extends Application {
 
     private static final String SHEET_ID = "19hl5J7xm4Fv2H4aRIOIRHEUCnv1vjzn4pPNrc_67r1g";
+    private static final String CACHESHEET_ID = "";
     private static final String CREDENTIALS_PATH =
             "C:\\Users\\FRC\\Instinct2026\\credentials.json";
 
@@ -71,7 +72,7 @@ public class MainGUI extends Application {
                 Task<Double> task = new Task<>() {
                     @Override
                     protected Double call() throws Exception {
-                        return epaService.getEPA(team);
+                        return EPAService.getEPA(team);
                     }
                 };
 
@@ -332,20 +333,48 @@ public class MainGUI extends Application {
         Button refreshBtn = new Button("Refresh");
         Button clearBtn = new Button("Clear");
         Button restoreBtn = new Button("Restore");
+        Button pushBtn = new Button("Cache -> Server");
+        Button pullBtn = new Button("Server -> Cache");
 
         refreshBtn.setOnAction(e -> {
             StringBuilder sb = new StringBuilder();
-            epaService.getCacheSnapshot().forEach((team, epa) ->
+            EPAService.getCacheSnapshot().forEach((team, epa) ->
                     sb.append("Team ").append(team)
                       .append(" -> ").append(epa).append("\n")
             );
             cacheView.setText(sb.toString());
         });
 
-        clearBtn.setOnAction(e -> epaService.clearCache());
-        restoreBtn.setOnAction(e -> epaService.retrieveBackupCache());
+        clearBtn.setOnAction(e -> EPAService.clearCache());
+        restoreBtn.setOnAction(e -> EPAService.retrieveBackupCache());
+        pushBtn.setOnAction(e -> {
+            if(sheetService != null) {
+                sheetService.logCache(EPAService.getCacheSnapshot());
+                cacheView.setText("Pushed cache to Server");
+            }
+        });
+        pullBtn.setOnAction(e -> {
+            if(sheetService != null) {
+                Map<Integer, Double> loadedCache;
+                try {
+                    loadedCache = sheetService.pullCache();
+                    EPAService.clearCache();
 
-        VBox tab3Layout = new VBox(10, new HBox(10, refreshBtn, clearBtn, restoreBtn), cacheView);
+                    loadedCache.forEach((team, epa) -> {
+                    EPAService.putCache(team, epa);
+                    });
+                } catch (Exception e1) {
+                    // TODO Auto-generated catch block
+                    e1.printStackTrace();
+                }
+                cacheView.setText("Pulled cache from Server");
+            }
+        });
+
+        HBox row1 = new HBox(10, refreshBtn, clearBtn, restoreBtn);
+        HBox row2 = new HBox(10, pushBtn, pullBtn);
+
+        VBox tab3Layout = new VBox(10, row1, row2, cacheView);
         tab3Layout.setPadding(new Insets(10));
 
         Tab tab3 = new Tab("Cache Console", tab3Layout);
@@ -358,27 +387,33 @@ public class MainGUI extends Application {
 
         Button consistencyBtn = new Button("Calculate Consistency");
 
-        Label consistencyLabel = new Label("Enter a team number.");
+        Label consistencyLabel = new Label("Enter a team number for consistency rating");
         ProgressIndicator spinner = new ProgressIndicator();
         spinner.setVisible(false);
         spinner.setMaxSize(40, 40);
+
+        Label epaRangeLabel = new Label("Enter a team number for EPA range");
 
         consistencyBtn.setOnAction(e -> {
             try {
                 int team = Integer.parseInt(consistencyInput.getText());
 
                 consistencyLabel.setText("Calculating...");
+                epaRangeLabel.setText("Fetching EPA...");
                 spinner.setVisible(true);
 
-                Task<Double> task = new Task<>() {
+                Task<TBAService.CAEResult> task = new Task<>() {
                     @Override
-                    protected Double call() throws Exception {
-                        return TBAService.getConsistency(team);
+                    protected TBAService.CAEResult call() throws Exception {
+                        return TBAService.getConsistencyAndEPA(team);
                     }
                 };
 
                 task.setOnSucceeded(ev -> {
-                    double score = task.getValue();
+
+                    CAEResult result = task.getValue();
+                    double score = result.consistency;
+                    double epa = result.EPA;
                     spinner.setVisible(false);
 
                     String rating;
@@ -418,6 +453,16 @@ public class MainGUI extends Application {
                             "\nConsistency: " + String.format("%.1f%%", score) +
                             "\nRating: " + rating
                     );
+
+                    epaRangeLabel.setText(String.format("%.1f%% - %s", score, rating));
+                    epaRangeLabel.setStyle("-fx-text-fill: " + color + "; -fx-font-weight: bold;");
+
+                    epaRangeLabel.setText(
+                        "Score Range: " + 
+                        (epa-Math.abs(epa - (epa/score))) +
+                        " to " +
+                        (epa/score)                   
+                    );
                 });
 
                 task.setOnFailed(ev -> {
@@ -440,17 +485,78 @@ public class MainGUI extends Application {
                 consistencyInput,
                 consistencyBtn,
                 spinner,
-                consistencyLabel
+                consistencyLabel,
+                epaRangeLabel
         );
         tab4Layout.setPadding(new Insets(15));
 
         Tab tab4 = new Tab("Team Consistency", tab4Layout);
 
-        // =========================
-        TabPane tabPane = new TabPane(tab1, tab2, tab3, tab4);
+        //================================
+        //Tab 5: 8-ball
+        //================================
 
-        Scene scene = new Scene(tabPane, 600, 500);
-        stage.setTitle("FRC Strategy Tool");
+        Label tipsLabel = new Label("Shake the 8-ball to see your fortune!!!");
+        Button tipsButton = new Button("Shake the 8-ball");
+
+        tipsButton.setOnAction(e -> {
+            double roll = Math.round(Math.random() * 5);
+            String rollCase = Double.toString(roll);
+            switch (rollCase) {
+                case "0.0":
+                    tipsLabel.setText("You will WIN your next match! :D");
+                    break;
+                case "1.0":
+                    tipsLabel.setText("You will BARELY WIN your next match! :)");
+                    break;
+                case "2.0":
+                    tipsLabel.setText("You will TIE your next match... :/");
+                    break;
+                case "3.0":
+                    tipsLabel.setText("You will LOSE your next match :(");
+                    break;
+                case "4.0":
+                    tipsLabel.setText("You will get absolutely, utterly annihilated in your next match >:O");
+                    break;
+                case "5.0":
+                    tipsLabel.setText("You will get a RED CARD!!!");
+                    break;
+                case "6.0":
+                    tipsLabel.setText("You will get a YELLOW CARD!");
+                    break;
+                case "7.0":
+                    tipsLabel.setText("Your robot will catch on fire'");
+                    break;
+                case "8.0":
+                    tipsLabel.setText("Your human player will be ran over by a robot");
+                    break;
+                case "9.0":
+                    tipsLabel.setText("Your human player will be arrested for tax fraud");
+                    break;
+                case "10.0":
+                    tipsLabel.setText("You will miss every single shot");
+                    break;
+            
+                default:
+                    tipsLabel.setText("the 8-Ball shattered :(");
+                    break;
+            }         
+
+        });
+
+        VBox tab5Layout = new VBox(12,
+               tipsLabel,
+               tipsButton
+        );
+        tab5Layout.setPadding(new Insets(15));
+
+        Tab tab5 = new Tab("8-Ball", tab5Layout);
+
+        // =========================
+        TabPane tabPane = new TabPane(tab1, tab2, tab4, tab3, tab5);
+
+        Scene scene = new Scene(tabPane, 600, 700);
+        stage.setTitle("Instinct V1.0");
         stage.setScene(scene);
         stage.show();
     }
@@ -468,8 +574,7 @@ public class MainGUI extends Application {
     private double updateEPA(TextField field, Label label) throws Exception {
         if (field.getText().isEmpty()) {
             label.setText("-");
-            return 0;
-        }
+            return 0;        }
 
         int team = Integer.parseInt(field.getText());
         double epa = EPAService.getEPA(team);
