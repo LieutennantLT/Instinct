@@ -32,19 +32,18 @@ public class GoogleSheetWriter {
 
     // Updates a row: Team | Unitless EPA | Approx EPA
      
-        public void appendEPARow(int teamNumber, double unitlessEPA, double approxEPA) throws Exception {
+        public void appendEPARow(int teamNumber, double approxEPA) throws Exception {
 
         ValueRange body = new ValueRange().setValues(
         Collections.singletonList(
         Arrays.asList(
                 teamNumber,
-                unitlessEPA,
                 approxEPA
         )
         )
         );
 
-        service.spreadsheets().values().update(sheetId, "Sheet1!A2:C2", body)
+        service.spreadsheets().values().update(sheetId, "Sheet1!A2:B2", body)
         .setValueInputOption("RAW").execute();
         }
 
@@ -64,7 +63,7 @@ public class GoogleSheetWriter {
         }
 
         public void pushCache(Map<Integer,Double> cache) throws Exception {
-                service.spreadsheets().values().clear(getSheetId(), "Sheet1!E2:F", null).execute();
+                service.spreadsheets().values().clear(getSheetId(), "Sheet1!E2:F2", null).execute();
 
                 for(Map.Entry<Integer,Double> entry : cache.entrySet()) {
                         appendCache(entry.getKey(), entry.getValue());

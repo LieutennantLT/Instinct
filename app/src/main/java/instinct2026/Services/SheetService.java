@@ -18,11 +18,11 @@ public class SheetService {
         }
     }
 
-    public void logTeamEPA(int team, double unitless, double epa) {
+    public void logTeamEPA(int team, double epa) {
         if (writer == null) return;
 
         try {
-            writer.appendEPARow(team, unitless, epa);
+            writer.appendEPARow(team, epa);
         } catch (Exception e) {
             e.printStackTrace();
             System.out.println("Failed to write to Google Sheets.");

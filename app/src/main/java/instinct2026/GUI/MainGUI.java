@@ -7,6 +7,7 @@ import java.util.TreeSet;
 
 import instinct2026.Constants.EPAConsts;
 import instinct2026.Services.*;
+import instinct2026.Services.FortuneService.FortuneResult;
 import instinct2026.Services.TBAService.CAEResult;
 import javafx.application.Application;
 import javafx.application.Platform;
@@ -84,7 +85,7 @@ public class MainGUI extends Application {
                     );
 
                     if (sheetService != null) {
-                        sheetService.logTeamEPA(team, epa, epa);
+                        sheetService.logTeamEPA(team, epa);
                     }
                 });
 
@@ -374,7 +375,7 @@ public class MainGUI extends Application {
         HBox row1 = new HBox(10, refreshBtn, clearBtn, restoreBtn);
         HBox row2 = new HBox(10, pushBtn, pullBtn);
 
-        VBox tab3Layout = new VBox(10, row1, row2, cacheView);
+        VBox tab3Layout = new VBox(10, cacheView, row1, row2);
         tab3Layout.setPadding(new Insets(10));
 
         Tab tab3 = new Tab("Cache Console", tab3Layout);
@@ -497,55 +498,23 @@ public class MainGUI extends Application {
         //================================
 
         Label tipsLabel = new Label("Shake the 8-ball to see your fortune!!!");
+        Label penaltyLabel = new Label("Shake the 8-ball to see your fortune!!!");
+        Label hPLabel = new Label("Shake the 8-ball to see your fortune!!!");
+
         Button tipsButton = new Button("Shake the 8-ball");
 
         tipsButton.setOnAction(e -> {
-            double roll = Math.round(Math.random() * 5);
-            String rollCase = Double.toString(roll);
-            switch (rollCase) {
-                case "0.0":
-                    tipsLabel.setText("You will WIN your next match! :D");
-                    break;
-                case "1.0":
-                    tipsLabel.setText("You will BARELY WIN your next match! :)");
-                    break;
-                case "2.0":
-                    tipsLabel.setText("You will TIE your next match... :/");
-                    break;
-                case "3.0":
-                    tipsLabel.setText("You will LOSE your next match :(");
-                    break;
-                case "4.0":
-                    tipsLabel.setText("You will get absolutely, utterly annihilated in your next match >:O");
-                    break;
-                case "5.0":
-                    tipsLabel.setText("You will get a RED CARD!!!");
-                    break;
-                case "6.0":
-                    tipsLabel.setText("You will get a YELLOW CARD!");
-                    break;
-                case "7.0":
-                    tipsLabel.setText("Your robot will catch on fire'");
-                    break;
-                case "8.0":
-                    tipsLabel.setText("Your human player will be ran over by a robot");
-                    break;
-                case "9.0":
-                    tipsLabel.setText("Your human player will be arrested for tax fraud");
-                    break;
-                case "10.0":
-                    tipsLabel.setText("You will miss every single shot");
-                    break;
+           FortuneResult result = FortuneService.generateFortune();
+           tipsLabel.setText(result.win);
+           penaltyLabel.setText(result.penalty);
+           hPLabel.setText(result.hP);
             
-                default:
-                    tipsLabel.setText("the 8-Ball shattered :(");
-                    break;
-            }         
-
         });
 
         VBox tab5Layout = new VBox(12,
                tipsLabel,
+               penaltyLabel,
+               hPLabel,
                tipsButton
         );
         tab5Layout.setPadding(new Insets(15));
