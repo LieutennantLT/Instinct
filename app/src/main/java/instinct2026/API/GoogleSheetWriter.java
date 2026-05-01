@@ -58,12 +58,12 @@ public class GoogleSheetWriter {
         )
         );
 
-        service.spreadsheets().values().append(sheetId, "Sheet1!E2:F2", body)
+        service.spreadsheets().values().append(sheetId, "Sheet1!E2:F", body)
         .setValueInputOption("RAW").execute();
         }
 
         public void pushCache(Map<Integer,Double> cache) throws Exception {
-                service.spreadsheets().values().clear(getSheetId(), "Sheet1!E2:F2", null).execute();
+                service.spreadsheets().values().clear(getSheetId(), "Sheet1!E2:F", null).execute();
 
                 for(Map.Entry<Integer,Double> entry : cache.entrySet()) {
                         appendCache(entry.getKey(), entry.getValue());
@@ -89,7 +89,7 @@ public class GoogleSheetWriter {
         }
 
         public ValueRange readAll() throws Exception {
-        return service.spreadsheets().values().get(sheetId, "Sheet1!E:F").execute();
+        return service.spreadsheets().values().get(sheetId, "Sheet1!E2:F").execute();
 
         }
 
